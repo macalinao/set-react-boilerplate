@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import "./App.css";
 import withHyperMask from "hypermask";
 import * as Web3 from "web3";
+import KyberUtil from "./kyberUtil";
 
 import SetProtocol from "setprotocol.js";
 import BigNumber from "bignumber.js";
@@ -65,9 +66,7 @@ class App extends Component {
     const naturalUnit = new BigNumber(10);
     const name = "My Set";
     const symbol = "MS";
-    console.log("lol1");
     const account = await this.getAccount();
-    console.log(account);
     const txOpts = {
       from: account,
       gas: 4000000,
@@ -109,15 +108,44 @@ class App extends Component {
      *   - Be sure to repeat the process for the other remaining TrueUSD/Dai token.
      */
     // Tutorial Link: https://docs.setprotocol.com/tutorials#issuing-a-set
-    // TODO: Insert your code here
+
+    // Grab the setAddress after creating our Set
+    const stableSetAddress = this.createSet();
+    const { setProtocol } = this.state;
+
+    const issueStableSet = async function() {
+      // Issue 1x StableSet which equals 10 ** 18 base units.
+      const issueQuantity = new BigNumber(10 ** 18);
+
+      // Check that our issue quantity is divisible by the natural unit.
+      const isMultipleOfNaturalUnit = await setProtocol.setToken.isMultipleOfNaturalUnitAsync(
+        stableSetAddress,
+        issueQuantity
+      );
+
+      if (isMultipleOfNaturalUnit) {
+        try {
+          return await setProtocol.issueAsync(stableSetAddress, issueQuantity, {
+            from: "0xYourMetaMaskAddress",
+            gas: 4000000,
+            gasPrice: 8000000000
+          });
+        } catch (err) {
+          throw new Error(`Error when issuing a new Set token: ${err}`);
+        }
+      }
+      throw new Error(
+        `Issue quantity is not multiple of natural unit. Confirm that your issue quantity is divisible by the natural unit.`
+      );
+    };
+
+    const issueTxHash = await issueStableSet();
   }
 
   getAccount() {
     const { web3 } = this.state;
     return new Promise((resolve, reject) => {
-      console.log("pt 1");
       web3.eth.getAccounts((err, res) => {
-        console.log("pt 2");
         if (err) reject(err);
         if (res[0]) resolve(res[0]);
         reject(Error("Your MetaMask is locked. Unlock it to continue."));
@@ -140,7 +168,8 @@ class App extends Component {
     return (
       <div className="App">
         <header>
-          <h1 className="App-title">Set Boiler Plate</h1>
+          <h1>Exchange One Cryptocurrency For Multiple</h1>
+          <p>Hypershift is a free tool powered by HyperMask and Set.</p>
         </header>
         <div>
           <button onClick={this.createSet}>Create My Set</button>
@@ -148,6 +177,18 @@ class App extends Component {
             ? this.renderEtherScanLink(createdSetLink, "Link to your new Set")
             : null}
         </div>
+        <button
+          onClick={async () => {
+            console.log(
+              (await new KyberUtil(this.state.web3).getExpectedRate(
+                "0x8870946B0018E2996a7175e8380eb0d43dD09EFE",
+                1000000000000000000
+              )).toString()
+            );
+          }}
+        >
+          show kyber
+        </button>
         <div>
           <button className="button-disabled" disabled>
             Issue My Set Tokens
