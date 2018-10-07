@@ -15,6 +15,25 @@ const config = {
   vaultAddress: "0x76aae6f20658f763bd58f5af028f925e7c5319af"
 };
 
+const Prices = ({ prices }) => (
+  <div>
+    {Object.keys(prices).map(tok => (
+      <div key={tok}>
+        <h3>
+          {tok}
+          /ETH
+        </h3>
+        <p>
+          Rate:{" "}
+          {prices[tok].minRate
+            .div(new BigNumber("1000000000000000000"))
+            .toString()}
+        </p>
+      </div>
+    ))}
+  </div>
+);
+
 class App extends Component {
   constructor() {
     super();
@@ -41,10 +60,22 @@ class App extends Component {
       setProtocol,
       web3: injectedWeb3,
       // Etherscan Links
-      createdSetLink: ""
+      createdSetLink: "",
+      prices: {}
     };
     this.createSet = this.createSet.bind(this);
     this.getAccount = this.getAccount.bind(this);
+
+    this.initPrices();
+  }
+
+  async initPrices() {
+    const prices = await new KyberUtil(this.state.web3).findPrices(
+      1000000000000000000
+    );
+    this.setState({
+      prices
+    });
   }
 
   async createSet() {
@@ -177,23 +208,18 @@ class App extends Component {
             ? this.renderEtherScanLink(createdSetLink, "Link to your new Set")
             : null}
         </div>
+        <Prices prices={this.state.prices} />
         <button
           onClick={async () => {
             console.log(
-              (await new KyberUtil(this.state.web3).getExpectedRate(
-                "0x8870946B0018E2996a7175e8380eb0d43dD09EFE",
+              await new KyberUtil(this.state.web3).findPrices(
                 1000000000000000000
-              )).toString()
+              )
             );
           }}
         >
           show kyber
         </button>
-        <div>
-          <button className="button-disabled" disabled>
-            Issue My Set Tokens
-          </button>
-        </div>
       </div>
     );
   }
